@@ -3,6 +3,7 @@ var Queue = require('firebase-queue'),
     http = require('http'),
     request = require('request');
 
+
 /*
 cm-worker.js firebaseUrl=http://firebase.com token=myToken numTasks=1 maxIdle=5
 
@@ -10,16 +11,37 @@ cm-worker.js firebaseUrl=http://firebase.com token=myToken numTasks=1 maxIdle=5
 
 var options={};
 var args = process.argv.slice(2);
-for(var i=0; i<args.length; i++){
-    var temp = args[i].split("=")
-    options[temp[0]] = temp[1]
-    console.log(temp);  
+// node cm-worker.js -t <secret>
+if(args[0] == '-t'){
+  console.log("creating token");
+  var FirebaseTokenGenerator = require("firebase-token-generator");
+  var tokenGenerator = new FirebaseTokenGenerator(args[1]);
+  var token = tokenGenerator.createToken({ uid: "queue-worker", some: "arbitrary", data: "here" });
+  console.log(token);
+  process.exit(0);
+  
 }
+else {
+  for(var i=0; i<args.length; i++){
+      var temp = args[i].split("=")
+      options[temp[0]] = temp[1]
+      console.log(temp);  
+  }
 
+}
 console.log("Listending to url "+options['firebaseUrl']);
 console.log("with token "+options['token']);
 
 var firebaseUrl = options['firebaseUrl'];
+var ref = new Firebase(firebaseUrl);
+var queueRef = new Firebase(firebaseUrl+'/queue');
+ref.authWithCustomToken(options['token'], function(error, authData) {
+  if (error) {
+    console.log("Login Failed!", error);
+  } else {
+    console.log("Login Succeeded!", authData);
+  }
+});
 
 // Exit on ctrl-c
 // or kill -s SIGINT [process_id] from termina. 
@@ -101,8 +123,6 @@ var get_achievements_from_response = function (service, body) {
   return totalAchievements;
 
 }
-var ref = new Firebase(firebaseUrl);
-var queueRef = new Firebase(firebaseUrl+'/queue');
 
 
 /*
