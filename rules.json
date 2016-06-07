@@ -1,0 +1,120 @@
+{
+    "rules": {
+      ".read" : false,
+      ".write" : false,
+      "queue": {
+        ".read": false,
+        ".write": "auth!=null",
+        ".indexOn": "_state",
+        "$taskID": {
+          ".validate": "newData.hasChildren(['user', 'username', 'message', 'published']) || newData.hasChildren(['_state', '_state_changed', '_progress'])",
+          "_state": {
+            ".validate": "newData.isString()"
+          },
+          "_state_changed": {
+            ".validate": "newData.isNumber() && (newData.val() === now || data.val() === newData.val())"
+          },
+          "_owner": {
+            ".validate": "newData.isString()"
+          },
+          "_progress": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+          },
+          "_error_details": {
+              "error": {
+                ".validate": "newData.isString()"
+              },
+              "previous_state": {
+                ".validate": "newData.isString()"
+              },
+              "original_task": {
+                /* This space intentionally left blank, prevents $other from matching on malformed task */
+              },
+              "$other": {
+                ".validate": false
+              }
+          },
+          "user": {
+            ".validate": "newData.val() === auth.uid"
+          },
+          "username": {
+            ".validate": "newData.val() === root.child('users/' + auth.uid + '/username').val()"
+          },
+          "message": {
+            ".validate": "newData.isString()"
+          },
+          "published": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false 
+          }
+        }
+      },
+      "jobs" : {
+        ".read": false,
+        ".write": false,
+        "$jobID": {
+          ".validate": "newData.hasChild('in_progress_state')",
+          "start_state": {
+            ".validate": "newData.isString()"
+          },
+          "in_progress_state": {
+            ".validate": "newData.isString()"
+          },
+          "finished_state": {
+            ".validate": "newData.isString()"
+          },
+          "error_state": {
+            ".validate": "newData.isString()"
+          },
+          "timeout": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "messages": {
+        ".read": "auth!=null",
+        ".write": false,
+        "$messageID": {
+          ".validate": "newData.hasChildren(['user', 'username', 'message', 'published'])",
+          "user": {
+            ".validate": "newData.val() === auth.uid"
+          },
+          "username": {
+            ".validate": "newData.val() === root.child('users/' + auth.uid + '/username').val()"
+          },
+          "message": {
+            ".validate": "newData.isString()"
+          },
+          "published": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false 
+          }
+        }
+      },
+      "users": {
+        ".read": true,
+        ".write": false,
+        "$userID": {
+          ".read": "auth.uid === $userID",
+          ".write": "auth.uid === $userID",
+          ".validate": "newData.hasChildren(['pic', 'username'])",
+          "username": {
+            ".validate": "newData.isString()"
+          },
+          "pic": {
+            ".validate": "newData.isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    }
+}
