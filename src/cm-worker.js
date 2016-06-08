@@ -25,7 +25,7 @@ else {
   for(var i=0; i<args.length; i++){
       var temp = args[i].split("=")
       options[temp[0]] = temp[1]
-      console.log(temp);  
+      //console.log(temp);  
   }
 
 }
@@ -56,23 +56,23 @@ var get_service_url = function (service, serviceID) {
   var theUrl = "";
   //console.log("Fetching serviceID "+serviceID+" on "+service);
   if (service == "freeCodeCamp") {
-    console.log("Using freeCodeCamp url " + theUrl);
+    //console.log("Using freeCodeCamp url " + theUrl);
     theUrl = "https://www.freecodecamp.com/" + serviceID;
   }
-  /*
+ 
   else if (service == "codeCombat") {
      //theUrl = "https://codecombat.com/db/user/" + serviceID + "/level.sessions?project=state.complete,levelID,levelName";
      theUrl= "https://codecombat.com/db/user/"+serviceID;
     console.log("Using codeCombat url "+theUrl); 
   }
-  */
+  
   else if (service == "pivotalExpert") {
     //theUrl = "https://pivotal-expert.firebaseio.com/pivotalExpert/userProfiles/Chris/userAchievements";
     theUrl = "https://pivotal-expert.firebaseio.com/pivotalExpert/userProfiles/"+serviceID+"/userAchievements.json";
-    console.log("Using PivotalEpert url "+theUrl); 
+    //console.log("Using PivotalEpert url "+theUrl); 
   }
   else if (service == "codeSchool") {
-    console.log("Using codeSchool url");
+    //console.log("Using codeSchool url");
     theUrl = "https://www.codeschool.com/users/" + serviceID + ".json";
   }
   return theUrl;
@@ -88,7 +88,7 @@ var get_achievements_from_response = function (service, body) {
   }
   else if(service == "pivotalExpert"){
     var jsonObject = JSON.parse(body);
-    console.log(body);
+    //console.log(body);
     var totalAchievements = 0;
     for (var k in jsonObject) {
        if (jsonObject.hasOwnProperty(k) && jsonObject[k]==true) totalAchievements++;
@@ -149,10 +149,21 @@ var update_profile_and_clear_task = function (err, data, reject, resolve) {
 }
 
 var update_achievements_and_clear_queue = function (location, theData, data, reject, resolve) {
-  // update the profile
+  // data = {"id":"cboesch","service":"pivotalExpert","count":1}
+  var profileUpdate = "classMentors/userProfiles/"+data['id']+"/services/"+data['service'];
+  var updateData = {"lastUpdate":Firebase.ServerValue.TIMESTAMP, "totalAchievements":data['count']};
+  console.log("Will update "+profileUpdate+" with "+JSON.stringify(updateData));
+  
+  //Update the user profile as well.  
+  ref.child(profileUpdate).update(updateData);
+  
+  
+  // update the userAchievements as well. Only the worker can edit this location. 
   ref.child(location).set(theData, function (err) {
     update_profile_and_clear_task(err, data, reject, resolve);
   });
+
+  
 }
 
 var fetch_service_url = function (theUrl, data, service, serviceID, reject, resolve, error, response, body, callback) {
@@ -189,7 +200,6 @@ var get_profile = function (service_response_body, task_data, reject, resolve) {
     else {
     //Fetch the service url  
       request(theUrl, function (error, response, body) {
-        console.log("----");
         console.log(error);
         fetch_service_url(theUrl, task_data, service, serviceID, reject, resolve, error, response, body, update_achievements_and_clear_queue);
       });
@@ -211,8 +221,8 @@ var process_task = function (data, progress, resolve, reject) {
     //TODO: handle profile fetch error. 
     //TODO: check that response is valid. 
     //TODO: If valid, process profile. 
-    console.log('Get profile.');
-    console.log(body);
+    //console.log('Get profile.');
+    //console.log(body);
     get_profile(body, data, reject, resolve);
 
   });
