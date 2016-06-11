@@ -3,7 +3,6 @@ var Queue = require('firebase-queue'),
     http = require('http'),
     request = require('request');
 
-
 /*
 cm-worker.js firebaseUrl=http://firebase.com token=myToken numTasks=1 maxIdle=5
 
@@ -16,7 +15,9 @@ if(args[0] == '-t'){
   console.log("creating token");
   var FirebaseTokenGenerator = require("firebase-token-generator");
   var tokenGenerator = new FirebaseTokenGenerator(args[1]);
-  var token = tokenGenerator.createToken({ uid: "queue-worker", some: "arbitrary", data: "here" });
+  // By default, create tokens that expire in June 2017
+  var token = tokenGenerator.createToken({ uid: "queue-worker", some: "arbitrary", data: "here" },
+                                         { expires:1497151174 });
   console.log(token);
   process.exit(0);
   
@@ -61,8 +62,8 @@ var get_service_url = function (service, serviceID) {
   }
  
   else if (service == "codeCombat") {
-     //theUrl = "https://codecombat.com/db/user/" + serviceID + "/level.sessions?project=state.complete,levelID,levelName";
-     theUrl= "https://codecombat.com/db/user/"+serviceID;
+     theUrl = "https://codecombat.com/db/user/" + serviceID + "/level.sessions?project=state.complete,levelID,levelName";
+     //theUrl= "https://codecombat.com/db/user/"+serviceID;
     console.log("Using codeCombat url "+theUrl); 
   }
   
@@ -97,26 +98,43 @@ var get_achievements_from_response = function (service, body) {
   }
   else if (service == "codeCombat") {
 
-    var jsonObject = JSON.parse(body);
-    //Currently includes stat.complete.false levels
-    console.log("Code Combat levels = " + jsonObject.length);
-    var theCount = 0;
-    for (var i = 0; i < jsonObject.length; i++) {
-      if (jsonObject[i].state.complete == true) {
-        theCount += 1;
-      }
+    var jsonObject;
 
+    try {
+      jsonObject = JSON.parse(body);
+    } catch (e) {
+      console.log("Error parsing json from codeCombat");
     }
-    //console.log("Completed Code Combat levels = " + theCount);
-    totalAchievements = theCount;
+
+    if (jsonObject) {
+      //Currently includes stat.complete.false levels
+      console.log("Code Combat levels = " + jsonObject.length);
+      var theCount = 0;
+      for (var i = 0; i < jsonObject.length; i++) {
+        if (jsonObject[i].state.complete == true) {
+          theCount += 1;
+        }
+      }
+      //console.log("Completed Code Combat levels = " + theCount);
+      totalAchievements = theCount;
+    }
   }
 
   else if (service == "codeSchool") {
-    var jsonObject = JSON.parse(body);
-    var badges = jsonObject['badges'];
-    console.log("Code School Badges earned " + badges.length);
-    totalAchievements = badges.length;
 
+    var jsonObject;
+
+    try {
+      jsonObject = JSON.parse(body);
+    } catch (e) {
+      console.log("Error parsing json from codeSchool");
+    }
+
+    if (jsonObject) {
+      var badges = jsonObject['badges'];
+      console.log("Code School Badges earned " + badges.length);
+      totalAchievements = badges.length;
+    }
   }
 
   //console.log("Fetched totalAchievements " + totalAchievements+ " on "+service); // Show the HTML for homepage.
@@ -186,21 +204,29 @@ var get_profile = function (service_response_body, task_data, reject, resolve) {
   var jsonObject = JSON.parse(service_response_body);
   var service = task_data.service;
   var services = jsonObject['services']
-  //console.log(services);
+  
+  //console.log("services",services);
   // If the user does not have the service it will be skipped. 
-  if (services.hasOwnProperty(service)) {
+  if(!services.hasOwnProperty(service)){
+    console.log("User has not registered for " + service);
+    resolve("User has not registered for " + service);
+  }
+  else {
     var serviceID = services[service]['details']['id'];
 
     var theUrl = get_service_url(service, serviceID);
     // Reject bad requests
     if (theUrl == "") {
+      console.log("Resolving unsupported service. "+service+" "+serviceID);
       resolve("Non-supported service " + service);
       //reject("Non-supported service " + service);
     }
     else {
-    //Fetch the service url  
+    //Fetch the service url
+      console.log("requesting url ", theUrl)  
       request(theUrl, function (error, response, body) {
-        console.log(error);
+        if (error) console.log(error);
+        //console.log("the body", body);
         fetch_service_url(theUrl, task_data, service, serviceID, reject, resolve, error, response, body, update_achievements_and_clear_queue);
       });
     }
@@ -222,6 +248,7 @@ var process_task = function (data, progress, resolve, reject) {
     //TODO: check that response is valid. 
     //TODO: If valid, process profile. 
     //console.log('Get profile.');
+    //console.log("profile body");
     //console.log(body);
     get_profile(body, data, reject, resolve);
 
